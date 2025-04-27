@@ -1,0 +1,126 @@
+{
+    "device_list": [
+        {
+            "device_id": "esp32wr1",
+            "name": "Exterior 1",
+            "enabled": 1,
+            "low_power_mode": {
+                "enabled": true,
+                "sleep_duration": 60000
+            },
+            "sensors": [
+                {
+                    "type": "BME280",
+                    "sample_period": 5000,
+                    "pin_sda": 21,
+                    "pin_scl": 22,
+                    "temperature_calibration": -0.9,
+                    "humidity_calibration": 0.0,
+                    "pressure_calibration": 0.0
+                },
+                {
+                    "type": "MOTION",
+                    "sample_period": 500,
+                    "pin_gpio": 4
+                }
+            ]
+        },
+        {
+            "device_id": "esp32wr3",
+            "name": "Basement 3",
+            "enabled": 1,
+            "low_power_mode": {
+                "enabled": true,
+                "sleep_duration": 60000
+            },
+            "sensors": [
+                {
+                    "type": "HDC1080",
+                    "sample_period": 10000,
+                    "pin_sda": 21,
+                    "pin_scl": 22,
+                    "temperature_calibration": -1.3,
+                    "humidity_calibration": 0.0
+                },
+                {
+                    "type": "MOTION",
+                    "sample_period": 500,
+                    "pin_gpio": 4
+                }
+            ]
+        },
+        {
+            "device_id": "esp32wr5",
+            "name": "Loft 5",
+            "enabled": 0,
+            "low_power_mode": {
+                "enabled": true,
+                "sleep_duration": 30000
+            },
+            "sensors": [
+                {
+                    "type": "SHT31-D",
+                    "sample_period": 2000,
+                    "pin_sda": 21,
+                    "pin_scl": 22,
+                    "temperature_calibration": 0.0,
+                    "humidity_calibration": 0.0
+                },
+                {
+                    "type": "MOTION",
+                    "sample_period": 300,
+                    "pin_gpio": 4
+                }
+            ]
+        },
+        {
+            "device_id": "esp32wr4",
+            "name": "Living Roomm 4",
+            "enabled": 0,
+            "sensors": [
+                {
+                    "type": "DS18B20",
+                    "pin_gpio": 19,
+                    "temperature_calibration": 0.0
+                },
+                {
+                    "type": "MOTION",
+                    "pin_gpio": 23
+                }
+            ]
+        },
+        {
+            "device_id": "esp32wr0",
+            "name": "Kitchen 0",
+            "enabled": 1,
+            "sensors": [
+                {
+                    "type": "SHT31-D",
+                    "sample_period": 10000,
+                    "pin_sda": 21,
+                    "pin_scl": 22,
+                    "temperature_calibration": 1.0,
+                    "humidity_calibration": 0.0
+                },
+                {
+                    "type": "MOTION",
+                    "pin_gpio": 19
+                }
+            ]
+        }
+    ],
+    "global_device_config": {
+        "heartbeat_period": 30000,
+        "motion_wait_period": 10000,
+        "check_for_config_updates": 10000
+    },
+    "server_config": {
+        "OFFLINE_THRESHOLD": "(0, 0, 3, 0)",
+        "OFFLINE_WAIT_LOG_TIME": "(0, 8, 0, 0)",
+        "INACTIVITY_IMPORTANT_WAIT_LOG_TIME": "(0, 2, 0, 0)",
+        "HOTTUB_COVER_CRITICAL_THRESHOLD": "(0, 0, 5, 0)",
+        "HOTTUB_COVER_WAIT_LOG_TIME": "(0, 0, 10, 0)",
+        "STATUS_REPORT_PERIOD": "(0, 0, 0, 10)",
+        "sms_enabled": 0
+    }
+}

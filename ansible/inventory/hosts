@@ -1,0 +1,5 @@
+[serve_config_servers]
+proxvm1 ansible_host=192.168.6.58
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3

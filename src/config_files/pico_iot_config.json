@@ -1,0 +1,80 @@
+{
+  "device_list": [
+    {
+      "device_id": "Attic06",
+      "name": "Attic",
+      "enabled": 1
+    },
+    {
+      "device_id": "pico_iot_133",
+      "name": "Garage 133456",
+      "enabled": 0
+    }
+  ],
+  "device_global_config": {
+    "heartbeat_publish_period": 20000,
+    "mqtt_reconnect_delay": 10000,
+    "motion_cooldown_wait_period": 30000,
+    "motion_check_period": 1000,
+    "switch_check_period": 1000,
+    "temperature_check_period": 2000,
+    "temp_sensor_pins": {
+      "i2c_scl": 5,
+      "i2c_sda": 4
+    },
+    "motion_sensor_pin": {
+      "pin": 16
+    },
+    "switch_sensor_pin": {
+      "pin": 14
+    },
+    "oled_config": {
+      "enabled": true,
+      "i2c_id": 0,
+      "sda_pin": 12,
+      "scl_pin": 13,
+      "width": 128,
+      "height": 64,
+      "i2c_addr": 60
+    },
+    "remote_logger": {
+      "http": {
+        "enabled": true,
+        "url": "http://uterm.local:5000/terminal"
+      },
+      "mqtt": {
+        "enabled": false,
+        "base_topic": "az_iots3/ulog"
+      }
+    },
+    "fan_controller_config": {
+      "enabled": true,
+      "pwm_pin": 15,
+      "pwm_freq": 1000,
+      "temp_min": 15.0,
+      "temp_max": 30.0,
+      "fan_min_duty": 20,
+      "fan_max_duty": 100,
+      "hysteresis": 1.0
+    }
+  },
+  "iot_server_config": {
+    "offline_threshold": [0, 0, 3, 0, 0],
+    "error_log_cooldown_period": [0, 0, 10, 0, 0],
+    "offline_error_wait_period": [0, 0, 30, 0, 0],
+    "status_report_period": [0, 0, 0, 10, 0],
+    "sms_enabled": 0
+  },
+  "system_global_config": {
+    "check_config_file_period": 10000,
+    "mqtt_config": {
+      "enabled": false,
+      "broker": "4.156.210.47",
+      "port": 1883,
+      "user": "iotuser",
+      "password": "na123",
+      "base_topic": "az_iots3/uevents",
+      "ssl": false
+    }
+  }
+}

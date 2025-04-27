@@ -1,0 +1,33 @@
+{
+    "temperature": {
+        "setPoint": 204,
+        "hysteresis": 2
+    },
+    "pid": {
+        "tempCalibration": 0.0,
+        "bangBangMode": false,
+        "numErrorSamples": 200,
+        "heat": {
+            "p": 0.025,
+            "i": 0.01,
+            "d": 4.0
+        },
+        "cool": {
+            "p": 0.025,
+            "i": 0.01,
+            "d": 4.0
+        }
+    },
+    "pwm": {
+        "channel": 0,
+        "resolution": 8,
+        "frequency": 100
+    },
+    "intervals": {
+        "systemMainLoopInterval": 50,
+        "statusUpdateInterval": 500,
+        "graphUpdateInterval": 10000,
+        "setDutyCycle": 2000,
+        "logStatusToTerminal": 10000
+    }
+}

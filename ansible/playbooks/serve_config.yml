@@ -1,0 +1,122 @@
+# serve_config.yml playbook
+- name: Deploy serve_config application
+  hosts: serve_config_servers
+  become: yes # Run most tasks with root privileges (sudo)
+  vars:
+    app_dir: /opt/serve_config # Define the application directory path
+    app_source_dir: "../../src/" # Define the local source directory path
+
+  tasks:
+    # --------------------------------------------------------------------------
+    # Dependencies Installation
+    # --------------------------------------------------------------------------
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600 # Only update if cache is older than 1 hour
+
+    - name: Install required system packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - python3-pip # Needed for potential Python operations, though Docker handles app python
+        state: present
+
+    # --------------------------------------------------------------------------
+    # Docker Installation
+    # --------------------------------------------------------------------------
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+        state: present
+
+    - name: Install Docker packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin # Installs docker compose v2
+        state: present
+        update_cache: yes # Update cache again after adding repo
+      register: docker_install_result # Register the task's output/result
+      until: docker_install_result is succeeded # Keep trying until the task succeeds
+      retries: 5 # Retry up to 5 times
+      delay: 15 # Wait 15 seconds between retries
+
+    - name: Make sure Docker service is running and enabled
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add deployment user to docker group for non-sudo docker commands (requires logout/login to take effect for user)
+      user:
+        name: "{{ ansible_user }}" # The user Ansible connects as (e.g., 'eric')
+        groups: docker
+        append: yes
+      # Note: While this adds the user, the Docker build/run tasks below still use 'become: yes' for simplicity/reliability
+
+    # --------------------------------------------------------------------------
+    # Application Deployment - Ensuring Clean State
+    # --------------------------------------------------------------------------
+    - name: Remove existing application directory to ensure clean deploy
+      # This step guarantees that any files deleted locally are removed from the target
+      file:
+        path: "{{ app_dir }}"
+        state: absent # Ensures the directory and its contents are removed
+      # become: yes is implied by the global setting
+
+    - name: Create application directory (freshly, after removal)
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}" # Set owner to deploy user
+        group: "{{ ansible_user }}" # Set group to deploy user
+        mode: '0755' # Standard directory permissions
+      # become: yes is implied by the global setting (needed to create/chown in /opt)
+
+    - name: Copy application files from local source to remote host
+      # Copies the entire content of the local app_source_dir to the remote app_dir
+      copy:
+        src: "{{ app_source_dir }}" # e.g., ../../src/
+        dest: "{{ app_dir }}/" # e.g., /opt/serve_config/
+        owner: "{{ ansible_user }}" # Ensure files are owned by deploy user
+        group: "{{ ansible_user }}"
+        mode: '0644' # Standard file permissions
+      # become: yes is implied by the global setting (needed to write/chown in /opt/serve_config)
+
+    # NOTE: The redundant 'Copy JSON config files' loop task has been removed.
+    # The single 'Copy application files' task above now handles copying the entire
+    # src directory, including the config_files subdirectory, correctly.
+
+    # --------------------------------------------------------------------------
+    # Docker Build and Run
+    # --------------------------------------------------------------------------
+    - name: Build Docker image for serve_config from the deployed code
+      community.docker.docker_image:
+        name: serve_config:latest # Name and tag for the image
+        source: build
+        build:
+          path: "{{ app_dir }}" # Use the deployed code directory as the build context
+      become: yes # Building images often requires elevated privileges
+
+    - name: Stop and remove existing container (if any) and run new one
+      community.docker.docker_container:
+        name: serve_config # Name of the container
+        image: serve_config:latest # Image to use
+        state: started # Ensure container is running
+        recreate: yes # Always stop/remove/create container - ensures new image/config is used
+        restart_policy: unless-stopped # Restart container unless manually stopped
+        published_ports:
+          - "5000:5000" # Map host port 5000 to container port 5000
+      become: yes # Running/managing Docker containers often requires elevated privileges
