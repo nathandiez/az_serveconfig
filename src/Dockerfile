@@ -15,11 +15,8 @@ RUN pip install -r requirements.txt gunicorn
 COPY serve_config.py .
 
 # Create the config_files directory inside the image
+# We'll mount a volume here instead of copying files
 RUN mkdir -p /app/config_files
-
-# Copy JSON files from the 'config_files' subdir in the build context
-# into the '/app/config_files/' directory inside the image
-COPY config_files/*.json /app/config_files/
 
 EXPOSE 5000
 

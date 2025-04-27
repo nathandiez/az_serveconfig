@@ -6,21 +6,23 @@
       "enabled": 1
     },
     {
-      "device_id": "pico_iot_133",
-      "name": "Garage 133456",
+      "device_id": "MasterBed3",
+      "name": "MasterBed",
       "enabled": 0
     }
   ],
   "device_global_config": {
     "heartbeat_publish_period": 20000,
-    "mqtt_reconnect_delay": 10000,
     "motion_cooldown_wait_period": 30000,
     "motion_check_period": 1000,
     "switch_check_period": 1000,
     "temperature_check_period": 2000,
-    "temp_sensor_pins": {
-      "i2c_scl": 5,
-      "i2c_sda": 4
+    "i2c_temp_sensor_pins": {
+      "i2c_scl": 17,
+      "i2c_sda": 16
+    },
+    "onewire_ds18b20_pin": {
+      "pin": 22
     },
     "motion_sensor_pin": {
       "pin": 16
@@ -31,8 +33,8 @@
     "oled_config": {
       "enabled": true,
       "i2c_id": 0,
-      "sda_pin": 12,
-      "scl_pin": 13,
+      "sda_pin": 20,
+      "scl_pin": 21,
       "width": 128,
       "height": 64,
       "i2c_addr": 60
@@ -40,20 +42,35 @@
     "remote_logger": {
       "http": {
         "enabled": true,
-        "url": "http://uterm.local:5000/terminal"
+        "url": "http://pxserveconfig.local:5000/terminal"
       },
       "mqtt": {
         "enabled": false,
-        "base_topic": "az_iots3/ulog"
+        "base_topic": "iots4/ulog"
       }
     },
-    "fan_controller_config": {
+    "fan_step_controller_config": {
+      "enabled": false,
+      "manual_override": {
+        "enabled": false,
+        "fans_active": 3
+      },
+      "pins": [4, 5, 6, 7, 8, 9],
+      "temp_min": 20.0,
+      "temp_max": 60.0,
+      "hysteresis": 1.0
+    },
+    "fan_pwm_controller_config": {
       "enabled": true,
+      "manual_override": {
+        "enabled": false,
+        "manual_dutycycle": 30
+      },
       "pwm_pin": 15,
-      "pwm_freq": 1000,
-      "temp_min": 15.0,
-      "temp_max": 30.0,
-      "fan_min_duty": 20,
+      "pwm_freq": 64,
+      "temp_min": 20.0,
+      "temp_max": 50.0,
+      "fan_min_duty": 0,
       "fan_max_duty": 100,
       "hysteresis": 1.0
     }
@@ -68,13 +85,14 @@
   "system_global_config": {
     "check_config_file_period": 10000,
     "mqtt_config": {
-      "enabled": false,
-      "broker": "4.156.210.47",
+      "enabled": true,
+      "broker": "uterm.local",
       "port": 1883,
-      "user": "iotuser",
-      "password": "na123",
-      "base_topic": "az_iots3/uevents",
-      "ssl": false
+      "user": "",
+      "password": "",
+      "base_topic": "iots4",
+      "ssl": false,
+      "reconnect_delay": 10000
     }
   }
 }

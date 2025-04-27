@@ -1,4 +1,4 @@
-# main.tf - Step 4 Corrected: Fix agent and initialization arguments
+# main.tf 
 
 terraform {
   required_providers {
@@ -20,7 +20,7 @@ provider "proxmox" {
 variable "vm_names" {
   description = "A list of Virtual Machine names to create"
   type        = list(string)
-  default     = ["proxserveconf"]
+  default     = ["pxserveconfig"]
 }
 
 # Define VM resources using for_each based on the variable

@@ -49,10 +49,7 @@ We need to install the QEMU guest agent and avahi-daemon in the cloud image:
 
 ```bash
 # First, modify the cloud image to install qemu-guest-agent and avahi-daemon
-virt-customize -a /var/lib/vz/template/iso/jammy-server-cloudimg-amd64.img --install qemu-guest-agent,avahi-daemon
-
-# Second, modify avahi-daemon configuration to disable IPv6
-virt-customize -a /var/lib/vz/template/iso/jammy-server-cloudimg-amd64.img --run-command "sed -i '/^\[server\]/a use-ipv6=no' /etc/avahi/avahi-daemon.conf"
+virt-customize -a /var/lib/vz/template/iso/jammy-server-cloudimg-amd64.img --install qemu-guest-agent
 ```
 
 This allows proper communication between Proxmox and the VM, which is essential for Terraform. The second command fixes the issue where avahi-daemon appends numbers to hostnames by disabling IPv6 for the avahi service.

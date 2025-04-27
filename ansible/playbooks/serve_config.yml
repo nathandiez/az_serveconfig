@@ -1,10 +1,13 @@
 # serve_config.yml playbook
-- name: Deploy serve_config application
+
+- name: Deploy serve_config application and configure base system
   hosts: serve_config_servers
-  become: yes # Run most tasks with root privileges (sudo)
+  become: yes
   vars:
-    app_dir: /opt/serve_config # Define the application directory path
-    app_source_dir: "../../src/" # Define the local source directory path
+    app_dir: /opt/serve_config
+    app_source_dir: "../../src/"
+    config_source_dir: "../../config_files/"
+    config_dir: /etc/serve_config  # Changed to /etc/serve_config
 
   tasks:
     # --------------------------------------------------------------------------
@@ -23,8 +26,50 @@
           - curl
           - gnupg
           - lsb-release
-          - python3-pip # Needed for potential Python operations, though Docker handles app python
+          - python3-pip
+          - avahi-daemon
         state: present
+
+    # --------------------------------------------------------------------------
+    # Base System Configuration (Timezone & Avahi)
+    # --------------------------------------------------------------------------
+    - name: Ensure timezone is set to America/New_York
+      community.general.timezone:
+        name: America/New_York
+      notify: Restart avahi-daemon 
+
+    - name: Ensure Avahi hostname configuration directory exists
+      ansible.builtin.file:
+        path: /etc/avahi/avahi-daemon.conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Ensure Avahi hostname config file is present
+      ansible.builtin.copy:
+        dest: /etc/avahi/avahi-daemon.conf.d/10-hostname.conf
+        content: |
+          [server]
+          host-name=pxserveconfig
+
+          [publish]
+          publish-hinfo=yes
+          publish-workstation=yes
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart avahi-daemon # Notify handler if file changes
+
+    # --- Task to disable IPv6 in main Avahi config
+    - name: Disable IPv6 in main Avahi config
+      ansible.builtin.lineinfile:
+        path: /etc/avahi/avahi-daemon.conf
+        regexp: '^use-ipv6=' # Match lines starting with use-ipv6=
+        line: 'use-ipv6=no'  # Ensure the line is exactly this
+        insertafter: '^\\[server\\]' # Place it after the [server] line
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart avahi-daemon # Restart Avahi if this setting is changed
 
     # --------------------------------------------------------------------------
     # Docker Installation
@@ -45,13 +90,13 @@
           - docker-ce
           - docker-ce-cli
           - containerd.io
-          - docker-compose-plugin # Installs docker compose v2
+          - docker-compose-plugin
         state: present
-        update_cache: yes # Update cache again after adding repo
-      register: docker_install_result # Register the task's output/result
-      until: docker_install_result is succeeded # Keep trying until the task succeeds
-      retries: 5 # Retry up to 5 times
-      delay: 15 # Wait 15 seconds between retries
+        update_cache: yes
+      register: docker_install_result
+      until: docker_install_result is succeeded
+      retries: 5
+      delay: 15
 
     - name: Make sure Docker service is running and enabled
       service:
@@ -59,64 +104,85 @@
         state: started
         enabled: yes
 
-    - name: Add deployment user to docker group for non-sudo docker commands (requires logout/login to take effect for user)
+    - name: Add deployment user to docker group for non-sudo docker commands
       user:
-        name: "{{ ansible_user }}" # The user Ansible connects as (e.g., 'eric')
+        name: "{{ ansible_user | default('eric') }}" # Using 'eric' as default if ansible_user isn't defined
         groups: docker
         append: yes
-      # Note: While this adds the user, the Docker build/run tasks below still use 'become: yes' for simplicity/reliability
 
     # --------------------------------------------------------------------------
     # Application Deployment - Ensuring Clean State
     # --------------------------------------------------------------------------
     - name: Remove existing application directory to ensure clean deploy
-      # This step guarantees that any files deleted locally are removed from the target
       file:
         path: "{{ app_dir }}"
-        state: absent # Ensures the directory and its contents are removed
-      # become: yes is implied by the global setting
+        state: absent
 
     - name: Create application directory (freshly, after removal)
       file:
         path: "{{ app_dir }}"
         state: directory
-        owner: "{{ ansible_user }}" # Set owner to deploy user
-        group: "{{ ansible_user }}" # Set group to deploy user
-        mode: '0755' # Standard directory permissions
-      # become: yes is implied by the global setting (needed to create/chown in /opt)
+        owner: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        group: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        mode: '0755'
+
+    - name: Create config directory
+      file:
+        path: "{{ config_dir }}"
+        state: directory
+        owner: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        group: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        mode: '0755'
 
     - name: Copy application files from local source to remote host
-      # Copies the entire content of the local app_source_dir to the remote app_dir
       copy:
-        src: "{{ app_source_dir }}" # e.g., ../../src/
-        dest: "{{ app_dir }}/" # e.g., /opt/serve_config/
-        owner: "{{ ansible_user }}" # Ensure files are owned by deploy user
-        group: "{{ ansible_user }}"
-        mode: '0644' # Standard file permissions
-      # become: yes is implied by the global setting (needed to write/chown in /opt/serve_config)
+        src: "{{ app_source_dir }}"
+        dest: "{{ app_dir }}/"
+        owner: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        group: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        mode: '0644'
 
-    # NOTE: The redundant 'Copy JSON config files' loop task has been removed.
-    # The single 'Copy application files' task above now handles copying the entire
-    # src directory, including the config_files subdirectory, correctly.
+    - name: Copy config files to volume directory
+      copy:
+        src: "{{ config_source_dir }}"
+        dest: "{{ config_dir }}/"
+        owner: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        group: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        mode: '0644'
 
     # --------------------------------------------------------------------------
     # Docker Build and Run
     # --------------------------------------------------------------------------
     - name: Build Docker image for serve_config from the deployed code
       community.docker.docker_image:
-        name: serve_config:latest # Name and tag for the image
+        name: serve_config:latest
         source: build
         build:
-          path: "{{ app_dir }}" # Use the deployed code directory as the build context
-      become: yes # Building images often requires elevated privileges
+          path: "{{ app_dir }}"
+      become: yes # Explicit become here might be redundant but safe
 
     - name: Stop and remove existing container (if any) and run new one
       community.docker.docker_container:
-        name: serve_config # Name of the container
-        image: serve_config:latest # Image to use
-        state: started # Ensure container is running
-        recreate: yes # Always stop/remove/create container - ensures new image/config is used
-        restart_policy: unless-stopped # Restart container unless manually stopped
+        name: serve_config
+        image: serve_config:latest
+        state: started
+        recreate: yes # Ensures changes in image/config are applied
+        restart_policy: unless-stopped
         published_ports:
-          - "5000:5000" # Map host port 5000 to container port 5000
-      become: yes # Running/managing Docker containers often requires elevated privileges
+          - "5000:5000"
+        volumes:
+          # Mount the config directory read-only into the container
+          - "{{ config_dir }}:/app/config_files:ro"
+      become: yes # Explicit become here might be redundant but safe
+
+  # --------------------------------------------------------------------------
+  # Handlers
+  # --------------------------------------------------------------------------
+  # Handlers are only run if notified by a task, and only once per play execution
+  handlers:
+    - name: Restart avahi-daemon
+      ansible.builtin.systemd:
+        name: avahi-daemon
+        state: restarted
+        daemon_reload: yes # Ensure systemd re-reads config if needed
+      listen: Restart avahi-daemon # Explicitly listen for the notification topic
