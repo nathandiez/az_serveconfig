@@ -53,8 +53,8 @@ resource "proxmox_virtual_environment_vm" "linux_vm" {
     dedicated = 2048
   }
   network_device {
-    bridge = "vmbr0"
-    mac_address = "52:54:00:12:34:58"  # Added static MAC address
+    bridge      = "vmbr0"
+    mac_address = "52:54:00:12:34:58" # Added static MAC address
 
   }
 
@@ -88,7 +88,7 @@ resource "proxmox_virtual_environment_vm" "linux_vm" {
 
     user_account {
       username = "nathan"
-      keys     = [ file("~/.ssh/id_ed25519.pub") ]
+      keys     = [file("~/.ssh/id_ed25519.pub")]
     }
   }
 }

@@ -123,11 +123,9 @@ In the Proxmox web UI:
 
 Set the token as an environment variable:
 
-## Set you endpoint, token, Proxmox username and password
+## Set you endpoint and token
 export PROXMOX_VE_ENDPOINT="https://192.168.5.5:8006"
-export PROXMOX_VE_API_TOKEN="root@pam\!terraform=e6e3e092-170e-45a9-a439-7ae4b6e7aaa8"
-export PROXMOX_VE_USERNAME="root@pam"
-export PROXMOX_VE_PASSWORD="er123"
+export PROXMOX_VE_API_TOKEN='root@pam!nedterraform=e6e3e092-170e-45a9-a439-7ae4b6e7aaa8'
 
 **Important**: The bpg/proxmox provider requires the combined token format with an equals sign between the token ID and secret, not separate environment variables for ID and secret.
 

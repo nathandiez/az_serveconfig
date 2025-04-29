@@ -1,4 +1,4 @@
-[serve_config_servers]nedserveconfig ansible_host=192.168.6.83
+[serve_config_servers]nedserveconfig ansible_host=192.168.6.84
 
 [all:vars]
 ansible_python_interpreter=/usr/bin/python3
