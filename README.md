@@ -123,10 +123,11 @@ In the Proxmox web UI:
 
 Set the token as an environment variable:
 
-```bash
-export PROXMOX_VE_ENDPOINT="https://your-proxmox-ip:8006"
-export PROXMOX_VE_API_TOKEN="root@pam!terraform=your-secret-token"
-```
+## Set you endpoint, token, Proxmox username and password
+export PROXMOX_VE_ENDPOINT="https://192.168.5.5:8006"
+export PROXMOX_VE_API_TOKEN="root@pam\!terraform=e6e3e092-170e-45a9-a439-7ae4b6e7aaa8"
+export PROXMOX_VE_USERNAME="root@pam"
+export PROXMOX_VE_PASSWORD="er123"
 
 **Important**: The bpg/proxmox provider requires the combined token format with an equals sign between the token ID and secret, not separate environment variables for ID and secret.
 
@@ -220,7 +221,9 @@ Customize the resource definition as needed, especially:
 ssh-add ~/.ssh/id_ed25519
 
 ## Step 8: Deploy VMs with Terraform
+source ./terraform/set-proxmox-env.sh
 
+## Step 8: Deploy VMs with Terraform
 Initialize and apply the Terraform configuration:
 
 ```bash

@@ -8,7 +8,7 @@ set -e
 
 # --- Configuration ---
 # Set the base hostname for the target server (without .local)
-TARGET_HOSTNAME=nedserveconfig"
+TARGET_HOSTNAME="nedserveconfig"
 # --- End Configuration ---
 
 
