@@ -20,7 +20,7 @@ provider "proxmox" {
 variable "vm_names" {
   description = "A list of Virtual Machine names to create"
   type        = list(string)
-  default     = ["pxserveconfig"]
+  default     = ["nedserveconfig"]
 }
 
 # Define VM resources using for_each based on the variable
