@@ -54,7 +54,7 @@ resource "proxmox_virtual_environment_vm" "linux_vm" {
   }
   network_device {
     bridge      = "vmbr0"
-    mac_address = "52:54:00:12:34:58" # Added static MAC address
+    mac_address = "52:54:00:12:23:01" # Added static MAC address
 
   }
 

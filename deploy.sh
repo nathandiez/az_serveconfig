@@ -37,7 +37,7 @@ fi
 
 # Source the Proxmox environment variables
 # Assuming this script exists in ./terraform relative to project root
-source ./terraform/set-proxmox-env.sh
+source ./set-proxmox-env.sh
 
 # Change into the terraform directory
 # Assuming deploy.sh is in project root
