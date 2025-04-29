@@ -32,18 +32,17 @@ resource "proxmox_virtual_environment_vm" "linux_vm" {
   node_name = "proxmox"
   tags      = ["terraform-managed"]
 
-  # --- VM Template Source (CRITICAL: CUSTOMIZE vm_id!) ---
+  # --- VM Template Source ---
   clone {
-    # IMPORTANT: Replace 9000 with the actual VMID of your Proxmox template.
-    vm_id = 9000
+    # Use the 9002 noble template
+    vm_id = 9002
     full  = true
   }
 
-  # --- QEMU Guest Agent (Corrected 'trim' argument) ---
+  # --- QEMU Guest Agent ---
   agent {
     enabled = true
-    # Ensure this line reads 'trim', not 'use_fstrim'
-    trim    = true # Optional
+    trim    = true
   }
 
   # --- Hardware Configuration ---
@@ -55,6 +54,8 @@ resource "proxmox_virtual_environment_vm" "linux_vm" {
   }
   network_device {
     bridge = "vmbr0"
+    mac_address = "52:54:00:12:34:58"  # Added static MAC address
+
   }
 
   # --- Disk Configuration ---
@@ -69,28 +70,34 @@ resource "proxmox_virtual_environment_vm" "linux_vm" {
     type = "l26"
   }
 
-  # --- Cloud-Init Configuration (Removed unsupported 'hostname' argument) ---
+  # --- Cloud-Init Configuration ---
   initialization {
-    # Ensure the 'hostname = ...' line below is REMOVED
-    # Cloud-Init will likely set hostname based on VM name or other defaults
-
     ip_config {
-      ipv4 { address = "dhcp" }
-      ipv6 { address = "dhcp" } # Remove if not needed
+      ipv4 {
+        # Use DHCP to obtain an IP address and gateway
+        address = "dhcp"
+      }
+    }
+
+    dns {
+      # You can keep static DNS servers or rely on DHCP-provided ones
+      # If you want DHCP to provide DNS, you might remove this block too,
+      # depending on your cloud-init template's default behavior.
+      servers = ["192.168.6.1", "8.8.8.8"]
     }
 
     user_account {
-      username = "eric"
-      keys     = [ file("~/.ssh/id_ed25519v2.pub") ] # Assumes key in ~/.ssh/
+      username = "nathan"
+      keys     = [ file("~/.ssh/id_ed25519.pub") ]
     }
   }
 }
 
-# Optional: Output VM IPs
+# Output VM IPs
 output "vm_ip_addresses" {
   value = {
     for vm_name, vm_data in proxmox_virtual_environment_vm.linux_vm :
     vm_name => vm_data.ipv4_addresses
   }
-  description = "Map of VM names to their primary IPv4 addresses"
+  description = "Map of VM names to their primary IPv4 addresses (will reflect DHCP assigned IPs)"
 }

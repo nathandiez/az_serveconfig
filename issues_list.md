@@ -18,7 +18,7 @@ Issues list
    - **Action:** Replace with a single dynamic route (e.g. `/\<filename>.json`) that validates and serves any file in `config_files`.  
 
 4. **Hard-coded values in Terraform**  
-   - **Issue:** `clone.vm_id=9000`, `node_name="proxmox"`, storage IDs, SSH username/key path, etc., are all literals.  
+   - **Issue:** `clone.vm_id=9002`, `node_name="proxmox"`, storage IDs, SSH username/key path, etc., are all literals.  
    - **Action:** Parameterize via `variables.tf` and pass overrides in `terraform.tfvars` or via `TF_VAR_…` env vars. For SSH, pass the public key’s **content** as a variable.  
 
 5. **Deploy script portability & robustness**  

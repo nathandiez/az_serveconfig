@@ -1,33 +1,52 @@
 # serve_config.yml playbook
+# Deploys the Flask config server application using Docker.
+# Assumes IP address is managed via DHCP (e.g., with router reservation).
 
 - name: Deploy serve_config application and configure base system
   hosts: serve_config_servers
-  become: yes
+  become: yes # Run most tasks with root privileges via sudo
   vars:
-    app_dir: /opt/serve_config
-    app_source_dir: "../../src/"
-    config_source_dir: "../../config_files/"
-    config_dir: /etc/serve_config  # Changed to /etc/serve_config
+    app_dir: /opt/serve_config # Directory for application source code on host
+    app_source_dir: "../../src/" # Relative path to source code on control machine
+    config_source_dir: "../../config_files/" # Relative path to config files on control machine
+    config_dir: /etc/serve_config # Directory for config files on host (mounted into container)
+    app_user: "{{ ansible_user | default('nathan') }}" # User to own app/config dirs (defaults to connection user)
 
   tasks:
+    # --------------------------------------------------------------------------
+    # Wait for System Readiness
+    # --------------------------------------------------------------------------
+    - name: Wait for apt/dpkg locks to be released
+      ansible.builtin.shell:
+        cmd: while lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
+      changed_when: false
+      timeout: 300  # 5 minute timeout
+      # become: yes # Might not be needed if user can run lsof
+
+    - name: Wait for cloud-init to complete
+      ansible.builtin.shell:
+        cmd: while [ ! -f /var/lib/cloud/instance/boot-finished ]; do sleep 5; done
+      changed_when: false
+      timeout: 300  # 5 minute timeout
+
     # --------------------------------------------------------------------------
     # Dependencies Installation
     # --------------------------------------------------------------------------
     - name: Update apt cache
-      apt:
+      ansible.builtin.apt:
         update_cache: yes
         cache_valid_time: 3600 # Only update if cache is older than 1 hour
 
     - name: Install required system packages
-      apt:
+      ansible.builtin.apt:
         name:
           - apt-transport-https
           - ca-certificates
-          - curl
+          - curl # Useful for verification/debugging
           - gnupg
           - lsb-release
-          - python3-pip
-          - avahi-daemon
+          - python3-pip # Needed if not using Docker, but good to have
+          - avahi-daemon # For .local hostname resolution
         state: present
 
     # --------------------------------------------------------------------------
@@ -36,13 +55,15 @@
     - name: Ensure timezone is set to America/New_York
       community.general.timezone:
         name: America/New_York
-      notify: Restart avahi-daemon 
+      notify: Restart avahi-daemon # Use handler name directly
 
     - name: Ensure Avahi hostname configuration directory exists
       ansible.builtin.file:
         path: /etc/avahi/avahi-daemon.conf.d
         state: directory
         mode: '0755'
+        owner: root
+        group: root
 
     - name: Ensure Avahi hostname config file is present
       ansible.builtin.copy:
@@ -59,8 +80,7 @@
         mode: '0644'
       notify: Restart avahi-daemon # Notify handler if file changes
 
-    # --- Task to disable IPv6 in main Avahi config
-    - name: Disable IPv6 in main Avahi config
+    - name: Disable IPv6 in main Avahi config for potentially better .local stability
       ansible.builtin.lineinfile:
         path: /etc/avahi/avahi-daemon.conf
         regexp: '^use-ipv6=' # Match lines starting with use-ipv6=
@@ -71,26 +91,30 @@
         mode: '0644'
       notify: Restart avahi-daemon # Restart Avahi if this setting is changed
 
+    # --- Removed Static Network Configuration Section ---
+    # IP address is handled by DHCP / Eero Reservation
+
     # --------------------------------------------------------------------------
     # Docker Installation
     # --------------------------------------------------------------------------
     - name: Add Docker GPG key
-      apt_key:
+      ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
         state: present
+        filename: docker # Explicit filename
 
     - name: Install Docker packages
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
           - containerd.io
-          - docker-compose-plugin
+          - docker-compose-plugin # Installs 'docker compose' command
         state: present
         update_cache: yes
       register: docker_install_result
@@ -99,14 +123,14 @@
       delay: 15
 
     - name: Make sure Docker service is running and enabled
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: yes
 
     - name: Add deployment user to docker group for non-sudo docker commands
-      user:
-        name: "{{ ansible_user | default('eric') }}" # Using 'eric' as default if ansible_user isn't defined
+      ansible.builtin.user:
+        name: "{{ app_user }}" # Use variable defined above
         groups: docker
         append: yes
 
@@ -114,41 +138,41 @@
     # Application Deployment - Ensuring Clean State
     # --------------------------------------------------------------------------
     - name: Remove existing application directory to ensure clean deploy
-      file:
+      ansible.builtin.file:
         path: "{{ app_dir }}"
         state: absent
 
     - name: Create application directory (freshly, after removal)
-      file:
+      ansible.builtin.file:
         path: "{{ app_dir }}"
         state: directory
-        owner: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
-        group: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
         mode: '0755'
 
-    - name: Create config directory
-      file:
+    - name: Create config directory on host
+      ansible.builtin.file:
         path: "{{ config_dir }}"
         state: directory
-        owner: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
-        group: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
+        owner: "{{ app_user }}" # Owned by user for easy updates via update_configs.yml? Or root?
+        group: "{{ app_user }}" # Consider permissions needed by container vs update script
         mode: '0755'
 
     - name: Copy application files from local source to remote host
-      copy:
+      ansible.builtin.copy:
         src: "{{ app_source_dir }}"
         dest: "{{ app_dir }}/"
-        owner: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
-        group: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
-        mode: '0644'
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        # mode: '0644' # Source files might need execute perm, consider preserving or setting 0755 if needed
 
-    - name: Copy config files to volume directory
-      copy:
+    - name: Copy config files to host config directory
+      ansible.builtin.copy:
         src: "{{ config_source_dir }}"
         dest: "{{ config_dir }}/"
-        owner: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
-        group: "{{ ansible_user | default('eric') }}" # Using 'eric' as default
-        mode: '0644'
+        owner: "{{ app_user }}" # Match dir owner
+        group: "{{ app_user }}" # Match dir owner
+        mode: '0644' # Config files usually don't need execute
 
     # --------------------------------------------------------------------------
     # Docker Build and Run
@@ -159,21 +183,43 @@
         source: build
         build:
           path: "{{ app_dir }}"
-      become: yes # Explicit become here might be redundant but safe
+        # No need for become: yes here, user is in docker group
 
     - name: Stop and remove existing container (if any) and run new one
       community.docker.docker_container:
         name: serve_config
         image: serve_config:latest
         state: started
-        recreate: yes # Ensures changes in image/config are applied
+        recreate: yes # Force recreation if image/config changes
         restart_policy: unless-stopped
         published_ports:
-          - "5000:5000"
+          - "5000:5000" # Map host port 5000 to container port 5000
         volumes:
-          # Mount the config directory read-only into the container
+          # Mount the host config directory read-only into the container
           - "{{ config_dir }}:/app/config_files:ro"
-      become: yes # Explicit become here might be redundant but safe
+        # No need for become: yes here, user is in docker group
+
+    # --------------------------------------------------------------------------
+    # Verification
+    # --------------------------------------------------------------------------
+    - name: Wait a few seconds for application inside container to start
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Check if serve_config ping endpoint is responding
+      ansible.builtin.uri:
+        url: http://127.0.0.1:5000/ping
+        method: GET
+        status_code: 200 # Expect HTTP 200 OK
+      register: ping_check
+      until: ping_check.status == 200
+      retries: 3 # Retry a few times if it's not immediately ready
+      delay: 3 # Wait 3 seconds between retries
+      ignore_errors: yes # Don't fail playbook if check fails, just report
+
+    - name: Show final application status
+      ansible.builtin.debug:
+        msg: "Serve Config Status: {{ 'Running and responding successfully' if ping_check.status == 200 else 'Failed to get successful response from /ping endpoint' }}"
 
   # --------------------------------------------------------------------------
   # Handlers
@@ -186,3 +232,6 @@
         state: restarted
         daemon_reload: yes # Ensure systemd re-reads config if needed
       listen: Restart avahi-daemon # Explicitly listen for the notification topic
+
+    # --- Removed 'Apply netplan configuration' handler ---
+

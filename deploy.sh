@@ -94,7 +94,7 @@ sed -i '' "s/ansible_host=.*/ansible_host=$IP/" inventory/hosts
 
 # Wait for SSH to become available on the VM
 echo "Waiting for SSH to become available on ${TARGET_HOSTNAME} ($IP)..."
-while ! ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=5 eric@"$IP" echo ready 2>/dev/null; do
+while ! ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=5 nathan@"$IP" echo ready 2>/dev/null; do
   echo "Still waiting for SSH..."
   sleep 5
 done
@@ -109,7 +109,7 @@ echo "Deployment complete! Your serve_config application is now running at http:
 echo "Current date: $(date)"
 echo ""
 
-# --- Quick Check for ${TARGET_HOSTNAME}.local ---
+# --- Quick Check for ${TARGET_HOSTNAME}.local --- 
 HOSTNAME_TO_CHECK="${TARGET_HOSTNAME}.local"
 URL_TO_CHECK="http://${HOSTNAME_TO_CHECK}:5000/pico_iot_config.json"
 CONNECT_TIMEOUT=5

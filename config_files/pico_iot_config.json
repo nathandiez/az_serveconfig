@@ -30,18 +30,9 @@
     "switch_sensor_pin": {
       "pin": 14
     },
-    "oled_config": {
-      "enabled": true,
-      "i2c_id": 0,
-      "sda_pin": 20,
-      "scl_pin": 21,
-      "width": 128,
-      "height": 64,
-      "i2c_addr": 60
-    },
     "remote_logger": {
       "http": {
-        "enabled": true,
+        "enabled": false,
         "url": "http://pxserveconfig.local:5000/terminal"
       },
       "mqtt": {

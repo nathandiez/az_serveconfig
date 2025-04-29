@@ -4,16 +4,14 @@
 
   // --- Add your customizations here ---
   "workbench.colorCustomizations": {
-    // Set the editor background color for this workspace
-    "editor.background": "#081d2f", // Example: A slightly blue-tinted dark background
-
-    // --- You can customize many other elements too! ---
-    "activityBar.background": "#1A2229", // Example: Darker activity bar (leftmost icons)
-    "sideBar.background": "#11293a",    // Example: Slightly lighter sidebar (file explorer)
-    "statusBar.background": "#1A2229",    // Example: Matching status bar (bottom)
-    "titleBar.activeBackground": "#343243", // Example: Matching title bar
-    "tab.activeBackground": "#2E404F", // Example: Color for the active tab
-    "tab.inactiveBackground": "#24313A" // Example: Color for inactive tabs
+    "activityBar.background": "#10005f", 
+    "titleBar.activeBackground": "#10005f", 
+    "editor.background": "#090037", 
+    "sideBar.background": "#090037", 
+    "terminal.background":"#090037",  
+    "statusBar.background": "#1A2229",
+    "tab.activeBackground": "#2E404F",
+    "tab.inactiveBackground": "#24313A"
 
     // Find more tokens here: https://code.visualstudio.com/api/references/theme-color
   }

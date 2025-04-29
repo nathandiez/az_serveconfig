@@ -8,9 +8,10 @@ This guide walks through creating VM templates in Proxmox using cloud images and
 - Admin access to Proxmox server (root or privileged user)
 - Terraform installed on your workstation
 ```bash
-# Using Homebrew
+# Using Homebrew install terraform and ansible
 brew tap hashicorp/tap
 brew install hashicorp/tap/terraform
+brew install ansible
 ```
 ## Step 1: Install Required Tools on Proxmox
 
@@ -32,24 +33,24 @@ Ubuntu cloud images are pre-built for cloud environments and work well with clou
 cd /var/lib/vz/template/iso/
 
 # If you need to download a fresh cloud image:
-# wget https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
+# wget https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 ```
 
-For this guide, we used the Ubuntu 22.04 (Jammy) cloud image.
+For this guide, we used the Ubuntu 22.04 (noble) cloud image.
 
 ## Step 3: Prepare the Cloud Image
 
 ```bash
 # If needed destroy the existing template if you are making updates
-qm status 9000
-qm destroy 9000
+qm status 9002
+qm destroy 9002
 ```
 
 We need to install the QEMU guest agent and avahi-daemon in the cloud image:
 
 ```bash
-# First, modify the cloud image to install qemu-guest-agent and avahi-daemon
-virt-customize -a /var/lib/vz/template/iso/jammy-server-cloudimg-amd64.img --install qemu-guest-agent
+# First, if not already done, modify the cloud image to install qemu-guest-agent
+virt-customize -a /var/lib/vz/template/iso/noble-server-cloudimg-amd64.img --install qemu-guest-agent
 ```
 
 This allows proper communication between Proxmox and the VM, which is essential for Terraform. The second command fixes the issue where avahi-daemon appends numbers to hostnames by disabling IPv6 for the avahi service.
@@ -60,28 +61,28 @@ Create and configure a VM that will become our template:
 
 ```bash
 # Create base VM
-qm create 9000 --name "ubuntu-2204-cloudinit-template" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0
+qm create 9002 --name "ubuntu-2204-cloudinit-template" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0
 
 # Import the disk
-qm importdisk 9000 /var/lib/vz/template/iso/jammy-server-cloudimg-amd64.img local-lvm
+qm importdisk 9002 /var/lib/vz/template/iso/noble-server-cloudimg-amd64.img local-lvm
 
 # Configure the VM to use the imported disk
-qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
+qm set 9002 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9002-disk-0
 
 # Set boot configuration
-qm set 9000 --boot c --bootdisk scsi0
+qm set 9002 --boot c --bootdisk scsi0
 
 # Add cloud-init drive
-qm set 9000 --ide2 local-lvm:cloudinit
+qm set 9002 --ide2 local-lvm:cloudinit
 
 # Configure serial and display settings
-qm set 9000 --serial0 socket --vga serial0
+qm set 9002 --serial0 socket --vga serial0
 
 # Enable QEMU guest agent
-qm set 9000 --agent enabled=1
+qm set 9002 --agent enabled=1
 
 # Convert the VM to a template
-qm template 9000
+qm template 9002
 ```
 
 ## Step 5: Configure Terraform Provider
@@ -152,7 +153,7 @@ resource "proxmox_virtual_environment_vm" "linux_vm" {
 
   # --- VM Template Source ---
   clone {
-    vm_id = 9000
+    vm_id = 9002
     full  = true
   }
 
@@ -211,9 +212,12 @@ output "vm_ip_addresses" {
 
 Customize the resource definition as needed, especially:
 - `node_name`: The name of your Proxmox node
-- `vm_id`: The ID of your template (9000 in our example)
+- `vm_id`: The ID of your template (9002 in our example)
 - `username`: The user to create in the VM
 - SSH key path: The path to your public SSH key
+
+## Cache your passphrase
+ssh-add ~/.ssh/id_ed25519
 
 ## Step 8: Deploy VMs with Terraform
 
