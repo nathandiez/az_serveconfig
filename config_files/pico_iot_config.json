@@ -6,9 +6,9 @@
       "enabled": 1
     },
     {
-      "device_id": "MasterBed3",
+      "device_id": "MasterBed03",
       "name": "MasterBed",
-      "enabled": 0
+      "enabled": 1
     }
   ],
   "device_global_config": {
