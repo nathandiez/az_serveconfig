@@ -7,11 +7,6 @@ terraform {
     }
   }
 }
-# Import the persistent public IP
-data "azurerm_public_ip" "persistent_ip" {
-  name                = "ned-serve-config-persistent"
-  resource_group_name = "rg-persistent-resources"
-}
 
 provider "azurerm" {
   features {}
@@ -74,16 +69,16 @@ resource "azurerm_network_security_group" "nsg" {
   resource_group_name = azurerm_resource_group.rg.name
   tags                = var.tags
 
-  # Allow HTTP (port 80) for Let's Encrypt verification
+  # Allow HTTPS for the Flask app from specific IPs
   security_rule {
-    name                       = "HTTP-80"
-    priority                   = 1000
+    name                       = "HTTPS"
+    priority                   = 1003
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "80"
-    source_address_prefix      = "*"
+    destination_port_range     = "443"
+    source_address_prefixes    = ["151.210.118.142/32", "40.71.17.54/32"] # Your IP and iots6 IP
     destination_address_prefix = "*"
   }
 
@@ -113,19 +108,6 @@ resource "azurerm_network_security_group" "nsg" {
     destination_address_prefix = "*"
   }
 
-  # Allow HTTPS for the Flask app from specific IPs
-  security_rule {
-    name                       = "HTTPS"
-    priority                   = 1003
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "443"
-    source_address_prefixes    = ["151.210.118.142/32", "40.71.17.54/32"] # Your IP and iots6 IP
-    destination_address_prefix = "*"
-  }
-
   lifecycle {
     create_before_destroy = true
   }
@@ -143,7 +125,7 @@ resource "azurerm_network_interface" "nic" {
     subnet_id                     = azurerm_subnet.subnet.id
     private_ip_address_allocation = "Static"
     private_ip_address            = "10.0.1.4"
-    public_ip_address_id          = data.azurerm_public_ip.persistent_ip.id
+    public_ip_address_id          = azurerm_public_ip.public_ip.id
   }
 
   # Add explicit dependency

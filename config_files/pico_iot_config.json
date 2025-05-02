@@ -77,7 +77,7 @@
     "check_config_file_period": 10000,
     "mqtt_config": {
       "enabled": true,
-      "broker": "192.168.6.87",
+      "broker": "172.174.32.103",
       "port": 1883,
       "user": "",
       "password": "",

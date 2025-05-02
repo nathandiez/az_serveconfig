@@ -199,6 +199,44 @@
           - "{{ config_dir }}:/app/config_files:ro"
         # No need for become: yes here, user is in docker group
 
+    # Install and configure Nginx as a reverse proxy for HTTPS
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+      become: yes
+
+    - name: Install Certbot for Let's Encrypt certificates
+      ansible.builtin.apt:
+        name: 
+          - certbot
+          - python3-certbot-nginx
+        state: present
+      become: yes
+
+    - name: Configure Nginx as a reverse proxy
+      ansible.builtin.template:
+        src: "../../templates/nginx-config.j2"
+        dest: "/etc/nginx/sites-available/serve_config"
+        mode: '0644'
+      become: yes
+      notify: Restart Nginx
+
+    - name: Enable Nginx site
+      ansible.builtin.file:
+        src: "/etc/nginx/sites-available/serve_config"
+        dest: "/etc/nginx/sites-enabled/serve_config"
+        state: link
+      become: yes
+      notify: Restart Nginx
+
+    - name: Remove default Nginx site
+      ansible.builtin.file:
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+      become: yes
+      notify: Restart Nginx
+
     # --------------------------------------------------------------------------
     # Verification
     # --------------------------------------------------------------------------
@@ -233,5 +271,10 @@
         daemon_reload: yes # Ensure systemd re-reads config if needed
       listen: Restart avahi-daemon # Explicitly listen for the notification topic
 
-    # --- Removed 'Apply netplan configuration' handler ---
+    - name: Restart Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: restarted
+      become: yes
 
+    # --- Removed 'Apply netplan configuration' handler ---

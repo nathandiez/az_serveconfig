@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # set-proxmox-env.sh
 
-export PROXMOX_VE_API_TOKEN='root@pam!nedterraform=e6e3e092-170e-45a9-a439-7ae4b6e7aaa8'
+export PROXMOX_VE_API_TOKEN='root@pam!nedterraform=150a4689-d159-450e-96df-2dc6adeee9ca'
 
 # --- Other Optional Vars (if endpoint/insecure removed from provider block) ---
 # export PROXMOX_VE_ENDPOINT='https://192.168.5.5:8006'

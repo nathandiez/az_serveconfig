@@ -1,0 +1,5 @@
+---
+# main.yml - Main playbook for deploying all IoT services
+
+- name: Include serve_config.yml
+  import_playbook: serve_config.yml

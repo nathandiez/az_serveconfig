@@ -17,6 +17,6 @@ echo "VM IP address: $IP"
 
 # Run the Ansible playbook to update just the config files
 echo "Updating config files only..."
-ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook playbooks/update_configs.yml
+ansible-playbook playbooks/update_configs.yml
 
 echo "Config update complete! Changes are immediately available at http://$IP:5000"
