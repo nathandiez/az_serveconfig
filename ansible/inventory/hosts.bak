@@ -1,5 +1,0 @@
-[serve_config_servers]
-nedserveconfig ansible_host=172.190.62.59
-
-[all:vars]
-ansible_python_interpreter=/usr/bin/python3

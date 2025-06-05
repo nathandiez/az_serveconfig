@@ -6,6 +6,16 @@
       "enabled": 1
     },
     {
+      "device_id": "Exterior01",
+      "name": "Exterior",
+      "enabled": 1
+    },
+    {
+      "device_id": "BackDoor08",
+      "name": "BackDoor",
+      "enabled": 1
+    },        
+    {
       "device_id": "MasterBed03",
       "name": "MasterBed",
       "enabled": 1
@@ -33,7 +43,7 @@
     "remote_logger": {
       "http": {
         "enabled": false,
-        "url": "http://nedserveconfig.local:5000/terminal"
+        "url": "http://PLACEHOLDER_HOSTNAME:5000/terminal"
       },
       "mqtt": {
         "enabled": false,
@@ -77,13 +87,20 @@
     "check_config_file_period": 10000,
     "mqtt_config": {
       "enabled": true,
-      "broker": "172.174.32.103",
+      "broker": "PLACEHOLDER_MQTT_BROKER",
       "port": 1883,
       "user": "",
       "password": "",
       "base_topic": "iots4",
       "ssl": false,
       "reconnect_delay": 10000
+    },
+    "api_config": {
+      "enabled": false,
+      "url": "https://iot-azure-api-app-raraid.azurewebsites.net/api/ingest",
+      "api_key": "PLACEHOLDER_API_KEY",
+      "timeout_ms": 10000,
+      "retry_delay_ms": 5000
     }
   }
 }

@@ -1,9 +1,43 @@
-.terraform/
-.terraform.lock.hcl
+# Environment variables - DO NOT COMMIT
+.env
+
+# Terraform files
 *.tfstate
 *.tfstate.*
-.vagrant/
-__pycache__/
-*.pyc
+*.tfplan
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# Ansible backup files
+ansible/inventory/hosts.bak
+ansible/inventory/hosts.tmp
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
 *.log
-set-proxmod-env.sh
+logs/
+
+# Temporary files
+tmp/
+temp/

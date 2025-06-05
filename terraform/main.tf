@@ -205,29 +205,9 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   custom_data = base64encode(<<-EOT
 #!/bin/bash
-apt-get update
-apt-get install -y avahi-daemon
-# Set hostname
 hostnamectl set-hostname nedserveconfig
-# Configure avahi
-mkdir -p /etc/avahi/avahi-daemon.conf.d
-cat > /etc/avahi/avahi-daemon.conf.d/10-hostname.conf << 'EOL'
-[server]
-host-name=nedserveconfig
-
-[publish]
-publish-hinfo=yes
-publish-workstation=yes
-EOL
-
-# Disable IPv6 in Avahi for better stability
-sed -i 's/^use-ipv6=.*/use-ipv6=no/' /etc/avahi/avahi-daemon.conf
-
-systemctl restart avahi-daemon
-systemctl enable avahi-daemon
 EOT
   )
-
   # Add explicit dependency
   depends_on = [
     azurerm_network_interface.nic,

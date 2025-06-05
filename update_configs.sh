@@ -19,4 +19,6 @@ echo "VM IP address: $IP"
 echo "Updating config files only..."
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook playbooks/update_configs.yml
 
-echo "Config update complete! Changes are immediately available at http://$IP:5000"
+echo "Config update complete! Changes are immediately available at:"
+echo "  HTTP:  http://$IP:5000"
+echo "  HTTPS: https://nedserveconfig-persist.eastus.cloudapp.azure.com"

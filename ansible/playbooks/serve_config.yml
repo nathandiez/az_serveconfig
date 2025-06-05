@@ -1,6 +1,5 @@
 # serve_config.yml playbook
 # Deploys the Flask config server application using Docker.
-# Assumes IP address is managed via DHCP (e.g., with router reservation).
 
 - name: Deploy serve_config application and configure base system
   hosts: serve_config_servers
@@ -21,7 +20,6 @@
         cmd: while lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
       changed_when: false
       timeout: 300  # 5 minute timeout
-      # become: yes # Might not be needed if user can run lsof
 
     - name: Wait for cloud-init to complete
       ansible.builtin.shell:
@@ -42,57 +40,18 @@
         name:
           - apt-transport-https
           - ca-certificates
-          - curl # Useful for verification/debugging
+          - curl
           - gnupg
           - lsb-release
-          - python3-pip # Needed if not using Docker, but good to have
-          - avahi-daemon # For .local hostname resolution
+          - python3-pip
         state: present
 
     # --------------------------------------------------------------------------
-    # Base System Configuration (Timezone & Avahi)
+    # Base System Configuration (Timezone)
     # --------------------------------------------------------------------------
     - name: Ensure timezone is set to America/New_York
       community.general.timezone:
         name: America/New_York
-      notify: Restart avahi-daemon # Use handler name directly
-
-    - name: Ensure Avahi hostname configuration directory exists
-      ansible.builtin.file:
-        path: /etc/avahi/avahi-daemon.conf.d
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-
-    - name: Ensure Avahi hostname config file is present
-      ansible.builtin.copy:
-        dest: /etc/avahi/avahi-daemon.conf.d/10-hostname.conf
-        content: |
-          [server]
-          host-name=nedserveconfig
-
-          [publish]
-          publish-hinfo=yes
-          publish-workstation=yes
-        owner: root
-        group: root
-        mode: '0644'
-      notify: Restart avahi-daemon # Notify handler if file changes
-
-    - name: Disable IPv6 in main Avahi config for potentially better .local stability
-      ansible.builtin.lineinfile:
-        path: /etc/avahi/avahi-daemon.conf
-        regexp: '^use-ipv6=' # Match lines starting with use-ipv6=
-        line: 'use-ipv6=no'  # Ensure the line is exactly this
-        insertafter: '^\\[server\\]' # Place it after the [server] line
-        owner: root
-        group: root
-        mode: '0644'
-      notify: Restart avahi-daemon # Restart Avahi if this setting is changed
-
-    # --- Removed Static Network Configuration Section ---
-    # IP address is handled by DHCP / Eero Reservation
 
     # --------------------------------------------------------------------------
     # Docker Installation
@@ -154,8 +113,8 @@
       ansible.builtin.file:
         path: "{{ config_dir }}"
         state: directory
-        owner: "{{ app_user }}" # Owned by user for easy updates via update_configs.yml? Or root?
-        group: "{{ app_user }}" # Consider permissions needed by container vs update script
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
         mode: '0755'
 
     - name: Copy application files from local source to remote host
@@ -164,15 +123,27 @@
         dest: "{{ app_dir }}/"
         owner: "{{ app_user }}"
         group: "{{ app_user }}"
-        # mode: '0644' # Source files might need execute perm, consider preserving or setting 0755 if needed
 
     - name: Copy config files to host config directory
       ansible.builtin.copy:
         src: "{{ config_source_dir }}"
         dest: "{{ config_dir }}/"
-        owner: "{{ app_user }}" # Match dir owner
-        group: "{{ app_user }}" # Match dir owner
-        mode: '0644' # Config files usually don't need execute
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+    # --------------------------------------------------------------------------
+    # Replace placeholders in config files with environment values
+    # --------------------------------------------------------------------------
+    - name: Replace placeholders in config files with environment values
+      ansible.builtin.replace:
+        path: "{{ config_dir }}/pico_iot_config.json"
+        regexp: "{{ item.placeholder }}"
+        replace: "{{ item.value }}"
+      loop:
+        - { placeholder: "PLACEHOLDER_MQTT_BROKER", value: "{{ lookup('env', 'MQTT_BROKER_IP') | default('127.0.0.1') }}" }
+        - { placeholder: "PLACEHOLDER_API_KEY", value: "{{ lookup('env', 'API_KEY') | default('changeme') }}" }
+        - { placeholder: "PLACEHOLDER_HOSTNAME", value: "{{ lookup('env', 'INTERNAL_HOSTNAME') | default('nedserveconfig.eastus.cloudapp.azure.com') }}" }
 
     # --------------------------------------------------------------------------
     # Docker Build and Run
@@ -183,7 +154,7 @@
         source: build
         build:
           path: "{{ app_dir }}"
-        # No need for become: yes here, user is in docker group
+          nocache: yes
 
     - name: Stop and remove existing container (if any) and run new one
       community.docker.docker_container:
@@ -197,45 +168,6 @@
         volumes:
           # Mount the host config directory read-only into the container
           - "{{ config_dir }}:/app/config_files:ro"
-        # No need for become: yes here, user is in docker group
-
-    # Install and configure Nginx as a reverse proxy for HTTPS
-    - name: Install Nginx
-      ansible.builtin.apt:
-        name: nginx
-        state: present
-      become: yes
-
-    - name: Install Certbot for Let's Encrypt certificates
-      ansible.builtin.apt:
-        name: 
-          - certbot
-          - python3-certbot-nginx
-        state: present
-      become: yes
-
-    - name: Configure Nginx as a reverse proxy
-      ansible.builtin.template:
-        src: "../../templates/nginx-config.j2"
-        dest: "/etc/nginx/sites-available/serve_config"
-        mode: '0644'
-      become: yes
-      notify: Restart Nginx
-
-    - name: Enable Nginx site
-      ansible.builtin.file:
-        src: "/etc/nginx/sites-available/serve_config"
-        dest: "/etc/nginx/sites-enabled/serve_config"
-        state: link
-      become: yes
-      notify: Restart Nginx
-
-    - name: Remove default Nginx site
-      ansible.builtin.file:
-        path: "/etc/nginx/sites-enabled/default"
-        state: absent
-      become: yes
-      notify: Restart Nginx
 
     # --------------------------------------------------------------------------
     # Verification
@@ -258,23 +190,3 @@
     - name: Show final application status
       ansible.builtin.debug:
         msg: "Serve Config Status: {{ 'Running and responding successfully' if ping_check.status == 200 else 'Failed to get successful response from /ping endpoint' }}"
-
-  # --------------------------------------------------------------------------
-  # Handlers
-  # --------------------------------------------------------------------------
-  # Handlers are only run if notified by a task, and only once per play execution
-  handlers:
-    - name: Restart avahi-daemon
-      ansible.builtin.systemd:
-        name: avahi-daemon
-        state: restarted
-        daemon_reload: yes # Ensure systemd re-reads config if needed
-      listen: Restart avahi-daemon # Explicitly listen for the notification topic
-
-    - name: Restart Nginx
-      ansible.builtin.systemd:
-        name: nginx
-        state: restarted
-      become: yes
-
-    # --- Removed 'Apply netplan configuration' handler ---

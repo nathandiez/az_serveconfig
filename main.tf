@@ -7,17 +7,19 @@ terraform {
   }
 }
 
-# Import proxmox module reference for the main.tf
-# Note: Instead of using the Proxmox module, we're now using Azure resources directly
-# This is just a reference to show the transformation
-
-module "ned_serveconfig_server" {
-  source = "./terraform"
-  
-  # These variables are now all handled inside the terraform directory
-  # No need to pass them explicitly as the Azure configuration uses variables.tf
+provider "azurerm" {
+  features {}
 }
 
-output "server_ip" {
-  value = module.ned_serveconfig_server.public_ip
+# Use the terraform module in the terraform/ directory
+module "azure_vm" {
+  source = "./terraform"
+}
+
+output "public_ip" {
+  value = module.azure_vm.public_ip
+}
+
+output "fqdn" {
+  value = module.azure_vm.fqdn
 }
